@@ -1,3 +1,5 @@
+#!/usr/bin/env /Users/vanna.chmielewski/miniconda3/envs/lmatracer/bin/python
+
 import glob
 import numpy as np
 import datetime
@@ -16,7 +18,7 @@ import sys
 filenames = sys.argv[1:]
 
 duration_min = 10
-resolution_m = 2500
+resolution_m = 1000
 chi2max = 1.0
 stationsmin = 6
 latlon_grid=False # False uses the SBU stereographic coordinate grid.
@@ -25,6 +27,7 @@ print("Reading LMA")
 lma_data, starttime = lma_read.dataset(filenames)
 
 good_events = (lma_data.event_stations >= 6) & (lma_data.event_chi2 <= chi2max)
+print ('Good events: ', np.sum(good_events))
 lma_data = lma_data[{'number_of_events':good_events}]
 
 
@@ -53,10 +56,16 @@ time_range = (grid_t0, grid_t1+grid_dt, grid_dt)
 # change what is gridded (various time series of 1D, 2D, 3D grids)
 
 if latlon_grid:
-    # Houston
-    # center = 29.7600000, -95.3700000
-    lat_range = (27.75, 31.75, 0.025)
-    lon_range = (-97.37, -93.37, 0.025)
+    # # Houston
+    # # center = 29.7600000, -95.3700000
+    # lat_range = (27.75, 31.75, 0.025)
+    # lon_range = (-97.37, -93.37, 0.025)
+    # alt_range = (0, 18e3, 1.0e3)
+
+    # Kessler Farms
+    # center = 34.977157, -97.440833
+    lat_range = (32.98, 37.98, 0.025)
+    lon_range = (-100.44, -95.44, 0.025)
     alt_range = (0, 18e3, 1.0e3)
 
 
@@ -208,13 +217,16 @@ else:
 
 # print(ds_ev)
 # print(grid_ds)
-grid_ds = events_to_grid(ds_ev, grid_ds, min_points_per_flash=3,
+grid_ds = events_to_grid(ds_ev, grid_ds, min_points_per_flash=5,
                          pixel_id_var=pixel_id_var,
                          event_spatial_vars=event_spatial_vars,
                          grid_spatial_coords=grid_spatial_coords)
 
 
 both_ds = xr.combine_by_coords((grid_ds, ds))
+
+print(ds)
+# print(grid_ds.flash_extent_density.sum())
 
 print("Writing data")
 duration_sec = (dttuple[1]-dttuple[0]).total_seconds()
@@ -228,3 +240,6 @@ outfile = dttuple[0].strftime(date_fmt)
 comp = dict(zlib=True, complevel=5)
 encoding = {var: comp for var in both_ds.data_vars}
 both_ds.to_netcdf(outfile, encoding=encoding)
+# encoding = {var: comp for var in ds.data_vars}
+# # print (encoding)
+# ds.to_netcdf(outfile, encoding=encoding)
